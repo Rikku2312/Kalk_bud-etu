@@ -17,8 +17,21 @@ const API = (resource, params = {}) => {
 
 async function apiFetch(resource, params = {}, options = {}) {
   const url = API(resource, params);
-  const res = await fetch(url, options);
-  return res.json();
+  try {
+    const res = await fetch(url, {
+      ...options,
+      credentials: 'same-origin'
+    });
+    if (!res.ok) {
+        const text = await res.text();
+        console.error('API Error Response:', text);
+        throw new Error(`Błąd API: ${res.status}`);
+    }
+    return await res.json();
+  } catch (e) {
+    console.error(`apiFetch error [${resource}]:`, e);
+    throw e;
+  }
 }
 
 function toast(msg, type = 'info') {

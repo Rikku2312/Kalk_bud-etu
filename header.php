@@ -1,4 +1,5 @@
 <?php
+ob_start();
 // header.php — Wspólny nagłówek wszystkich stron
 require_once 'db.php';
 $currentPage = basename($_SERVER['PHP_SELF'], '.php');

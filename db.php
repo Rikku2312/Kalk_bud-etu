@@ -5,11 +5,20 @@
 
 // Pobranie lub wygenerowanie ID sesji z ciasteczka
 $session_id = $_COOKIE['budget_session_id'] ?? null;
-if (!$session_id) {
+
+if (!$session_id || !preg_match('/^[a-f0-9]{16}$/', $session_id)) {
     $session_id = bin2hex(random_bytes(8));
-    // Ustawiamy ciasteczko na rok
-    setcookie('budget_session_id', $session_id, time() + (86400 * 365), "/");
+    // Ustawiamy ciasteczko na rok, dostęp dla całej ścieżki
+    setcookie('budget_session_id', $session_id, [
+        'expires' => time() + (86400 * 365),
+        'path' => '/',
+        'samesite' => 'Lax',
+        'httponly' => false // Pozwalamy JS widzieć jeśli trzeba, ale główny cel to stabilność
+    ]);
 }
+
+// Debug header (widoczny w DevTools -> Network)
+header("X-Budget-Session: $session_id");
 
 define('STORAGE_DIR', __DIR__ . '/storage');
 define('DATA_FILE', STORAGE_DIR . "/data_{$session_id}.json");

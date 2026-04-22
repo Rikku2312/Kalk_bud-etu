@@ -104,10 +104,14 @@ document.getElementById('prevMonth').addEventListener('click', () => { curMonth-
 document.getElementById('nextMonth').addEventListener('click', () => { curMonth++; if(curMonth>12){curMonth=1;curYear++;} loadAll(); });
 document.getElementById('todayBtn').addEventListener('click',  () => { curMonth=new Date().getMonth()+1; curYear=new Date().getFullYear(); loadAll(); });
 
-function loadAll() {
+async function loadAll() {
   document.getElementById('monthLabel').textContent = `${MONTH_NAMES[curMonth-1]} ${curYear}`;
-  loadStats();
-  loadBudgets();
+  try {
+    await Promise.all([loadStats(), loadBudgets()]);
+  } catch (e) {
+    console.error('loadAll failed:', e);
+    toast('Nie udało się załadować danych.', 'error');
+  }
 }
 
 // ── Stats ──────────────────────────────────────────────────
