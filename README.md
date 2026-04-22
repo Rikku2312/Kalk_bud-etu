@@ -4,38 +4,12 @@ Profesjonalna aplikacja do zarządzania budżetem domowym z wykresami, analizami
 
 ---
 
-## 🌐 Link do aplikacji w przeglądarce
+## 🌐 Jak uruchomić?
 
-```
-http://localhost/Cos123/Jonkilol/Kalk/Kalk_bud-etu/index.php
-```
+Wystarczy otworzyć plik `index.html` w dowolnej nowoczesnej przeglądarce internetowej. Nie wymaga serwera XAMPP, PHP ani bazy danych MySQL! Wszystkie dane są bezpiecznie przechowywane w Twojej przeglądarce (`localStorage`).
 
-> **Wymagane:** XAMPP z uruchomionymi Apache i MySQL.
-
----
-
-## ⚙️ Konfiguracja (pierwsze uruchomienie)
-
-### 1. Importuj bazę danych
-
-Otwórz **phpMyAdmin**: [http://localhost/phpmyadmin](http://localhost/phpmyadmin)
-
-Kliknij **Importuj** → wybierz plik `setup.sql` → **Wykonaj**.
-
-Lub przez konsolę XAMPP:
-```bash
-mysql -u root -p < setup.sql
-```
-
-### 2. Sprawdź połączenie z bazą
-
-Otwórz plik `db.php` i upewnij się, że dane są poprawne:
-```php
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');   // twój użytkownik MySQL
-define('DB_PASS', '');       // twoje hasło MySQL
-define('DB_NAME', 'kalk_budget');
-```
+> **Uwaga:** Jeśli używasz XAMPP-a, aplikacja będzie działać pod adresem:
+> `http://localhost/Cos123/Jonkilol/Kalk/Kalk_bud-etu/index.html`
 
 ### 3. Uruchom aplikację
 

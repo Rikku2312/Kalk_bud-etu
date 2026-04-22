@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kalk Budget</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- App Container -->
+  <div class="app-container">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">💸</span>
+          <span class="logo-text">Kalk Budget</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-target="dashboard">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-target="transactions">
+          <span class="nav-icon">💳</span>
+          <span class="nav-label">Transakcje</span>
+        </a>
+        <a href="#" class="nav-item" data-target="budgets">
+          <span class="nav-icon">🎯</span>
+          <span class="nav-label">Budżety</span>
+        </a>
+        <a href="#" class="nav-item" data-target="savings">
+          <span class="nav-icon">🐖</span>
+          <span class="nav-label">Cele</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button id="resetDataBtn" class="btn btn-outline btn-sm">Resetuj dane</button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <h1 id="pageTitle">Dashboard</h1>
+          <p id="pageSubtitle">Przegląd Twoich finansów</p>
+        </div>
+        <div class="topbar-right">
+          <button class="btn btn-primary" onclick="openModal('transactionModal')">
+            <span class="btn-icon">+</span> Nowa Transakcja
+          </button>
+        </div>
+      </header>
+
+      <!-- Pages -->
+      <div class="pages-container">
+        
+        <!-- DASHBOARD PAGE -->
+        <section id="page-dashboard" class="page active">
+          
+          <!-- Summary Cards -->
+          <div class="summary-grid">
+            <div class="summary-card income">
+              <div class="card-icon">📈</div>
+              <div class="card-info">
+                <h3>Przychody</h3>
+                <p id="dashIncome">0,00 zł</p>
+              </div>
+            </div>
+            <div class="summary-card expense">
+              <div class="card-icon">📉</div>
+              <div class="card-info">
+                <h3>Wydatki</h3>
+                <p id="dashExpense">0,00 zł</p>
+              </div>
+            </div>
+            <div class="summary-card balance">
+              <div class="card-icon">💰</div>
+              <div class="card-info">
+                <h3>Bilans</h3>
+                <p id="dashBalance">0,00 zł</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Area -->
+          <div class="charts-grid">
+            <div class="chart-container glass-panel">
+              <div class="panel-header">
+                <h2>Analiza Wydatków</h2>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="expenseChart"></canvas>
+              </div>
+            </div>
+            <div class="chart-container glass-panel">
+              <div class="panel-header">
+                <h2>Ostatnie Transakcje</h2>
+              </div>
+              <div class="recent-transactions-list" id="dashRecentList">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TRANSACTIONS PAGE -->
+        <section id="page-transactions" class="page">
+          <div class="glass-panel">
+            <div class="panel-header filters-header">
+              <h2>Lista Transakcji</h2>
+              <div class="filters">
+                <select id="filterType" class="input-field">
+                  <option value="all">Wszystkie typy</option>
+                  <option value="income">Przychody</option>
+                  <option value="expense">Wydatki</option>
+                </select>
+                <input type="text" id="searchTransaction" class="input-field" placeholder="Szukaj...">
+              </div>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Opis</th>
+                    <th>Kategoria</th>
+                    <th>Kwota</th>
+                    <th>Akcje</th>
+                  </tr>
+                </thead>
+                <tbody id="transactionsTableBody">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- BUDGETS PAGE -->
+        <section id="page-budgets" class="page">
+          <div class="budgets-header">
+            <h2>Twoje Limity Miesięczne</h2>
+            <button class="btn btn-secondary" onclick="openModal('budgetModal')">Ustaw Limit</button>
+          </div>
+          <div class="budgets-grid" id="budgetsGrid">
+            <!-- Injected via JS -->
+          </div>
+        </section>
+
+        <!-- SAVINGS PAGE -->
+        <section id="page-savings" class="page">
+          <div class="savings-header">
+            <h2>Cele Oszczędnościowe</h2>
+            <button class="btn btn-secondary" onclick="openModal('savingsModal')">Dodaj Cel</button>
+          </div>
+          <div class="savings-grid" id="savingsGrid">
+            <!-- Injected via JS -->
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- MODALS -->
+  <div class="modal-overlay" id="transactionModal">
+    <div class="modal glass-panel">
+      <div class="modal-header">
+        <h2>Nowa Transakcja</h2>
+        <button class="close-btn" onclick="closeModal('transactionModal')">&times;</button>
+      </div>
+      <form id="transactionForm" class="modal-body">
+        <input type="hidden" id="transId">
+        <div class="form-group">
+          <label>Typ</label>
+          <div class="radio-group">
+            <label><input type="radio" name="transType" value="expense" checked> Wydatek</label>
+            <label><input type="radio" name="transType" value="income"> Przychód</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Kwota (PLN)</label>
+          <input type="number" id="transAmount" class="input-field" step="0.01" required>
+        </div>
+        <div class="form-group">
+          <label>Opis</label>
+          <input type="text" id="transDesc" class="input-field" required>
+        </div>
+        <div class="form-group">
+          <label>Kategoria</label>
+          <select id="transCategory" class="input-field" required>
+            <!-- Injected via JS -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" id="transDate" class="input-field" required>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('transactionModal')">Anuluj</button>
+          <button type="submit" class="btn btn-primary">Zapisz</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Budget Modal -->
+  <div class="modal-overlay" id="budgetModal">
+    <div class="modal glass-panel">
+      <div class="modal-header">
+        <h2>Ustaw Limit Budżetowy</h2>
+        <button class="close-btn" onclick="closeModal('budgetModal')">&times;</button>
+      </div>
+      <form id="budgetForm" class="modal-body">
+        <div class="form-group">
+          <label>Kategoria</label>
+          <select id="budgetCategory" class="input-field" required>
+            <!-- Injected via JS -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Miesięczny Limit (PLN)</label>
+          <input type="number" id="budgetLimit" class="input-field" step="0.01" required>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('budgetModal')">Anuluj</button>
+          <button type="submit" class="btn btn-primary">Zapisz</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Savings Modal -->
+  <div class="modal-overlay" id="savingsModal">
+    <div class="modal glass-panel">
+      <div class="modal-header">
+        <h2>Dodaj Cel Oszczędnościowy</h2>
+        <button class="close-btn" onclick="closeModal('savingsModal')">&times;</button>
+      </div>
+      <form id="savingsForm" class="modal-body">
+        <input type="hidden" id="saveId">
+        <div class="form-group">
+          <label>Nazwa celu</label>
+          <input type="text" id="saveName" class="input-field" required>
+        </div>
+        <div class="form-group">
+          <label>Kwota docelowa (PLN)</label>
+          <input type="number" id="saveTarget" class="input-field" step="0.01" required>
+        </div>
+        <div class="form-group">
+          <label>Obecnie odłożono (PLN)</label>
+          <input type="number" id="saveCurrent" class="input-field" step="0.01" value="0">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('savingsModal')">Anuluj</button>
+          <button type="submit" class="btn btn-primary">Zapisz</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
