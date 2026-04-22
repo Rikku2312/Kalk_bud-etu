@@ -3,19 +3,16 @@
 // db.php — Przechowywanie danych w pliku JSON
 // ============================================================
 
-// Pobranie lub wygenerowanie ID sesji z ciasteczka
-$session_id = $_COOKIE['budget_session_id'] ?? null;
-
-if (!$session_id || !preg_match('/^[a-f0-9]{16}$/', $session_id)) {
-    $session_id = bin2hex(random_bytes(8));
-    // Ustawiamy ciasteczko na rok, dostęp dla całej ścieżki
-    setcookie('budget_session_id', $session_id, [
-        'expires' => time() + (86400 * 365),
-        'path' => '/',
-        'samesite' => 'Lax',
-        'httponly' => false // Pozwalamy JS widzieć jeśli trzeba, ale główny cel to stabilność
+// Inicjalizacja sesji PHP (obsługuje ciasteczka automatycznie)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start([
+        'cookie_lifetime' => 86400 * 365,
+        'cookie_path' => '/',
+        'cookie_samesite' => 'Lax'
     ]);
 }
+
+$session_id = session_id();
 
 // Debug header (widoczny w DevTools -> Network)
 header("X-Budget-Session: $session_id");
