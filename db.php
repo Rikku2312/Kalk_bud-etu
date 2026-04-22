@@ -1,29 +1,82 @@
 <?php
 // ============================================================
-// db.php — Połączenie z bazą danych MySQL
+// db.php — Przechowywanie danych w pliku JSON
 // ============================================================
 
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');        // domyślny użytkownik XAMPP
-define('DB_PASS', '');            // domyślne hasło XAMPP (puste)
-define('DB_NAME', 'kalk_budget');
-define('DB_CHARSET', 'utf8mb4');
+// Pobranie lub wygenerowanie ID sesji z ciasteczka
+$session_id = $_COOKIE['budget_session_id'] ?? null;
+if (!$session_id) {
+    $session_id = bin2hex(random_bytes(8));
+    // Ustawiamy ciasteczko na rok
+    setcookie('budget_session_id', $session_id, time() + (86400 * 365), "/");
+}
 
-function getDB(): PDO {
-    static $pdo = null;
-    if ($pdo === null) {
-        $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
-        $options = [
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES   => false,
-        ];
-        try {
-            $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
-        } catch (PDOException $e) {
-            http_response_code(500);
-            die(json_encode(['error' => 'Błąd połączenia z bazą danych: ' . $e->getMessage()]));
-        }
+define('STORAGE_DIR', __DIR__ . '/storage');
+define('DATA_FILE', STORAGE_DIR . "/data_{$session_id}.json");
+
+// Upewnienie się, że katalog istnieje
+if (!is_dir(STORAGE_DIR)) {
+    mkdir(STORAGE_DIR, 0777, true);
+}
+
+/**
+ * Ładuje wszystkie dane z pliku JSON.
+ */
+function loadData(): array {
+    if (!file_exists(DATA_FILE)) {
+        return initializeData();
     }
-    return $pdo;
+    $json = file_get_contents(DATA_FILE);
+    $data = json_decode($json, true);
+    if (!$data) return initializeData();
+    return $data;
+}
+
+/**
+ * Zapisuje dane do pliku JSON.
+ */
+function saveData(array $data): void {
+    file_put_contents(DATA_FILE, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+}
+
+/**
+ * Inicjalizuje domyślne dane.
+ */
+function initializeData(): array {
+    $defaultData = [
+        'categories' => [
+            ['id' => 1,  'name' => 'Wynagrodzenie',  'type' => 'income',  'icon' => '💼', 'color' => '#10b981'],
+            ['id' => 2,  'name' => 'Freelance',      'type' => 'income',  'icon' => '💻', 'color' => '#06b6d4'],
+            ['id' => 3,  'name' => 'Inwestycje',     'type' => 'income',  'icon' => '📈', 'color' => '#8b5cf6'],
+            ['id' => 4,  'name' => 'Inne przychody', 'type' => 'income',  'icon' => '💰', 'color' => '#f59e0b'],
+            ['id' => 5,  'name' => 'Jedzenie',       'type' => 'expense', 'icon' => '🍕', 'color' => '#ef4444'],
+            ['id' => 6,  'name' => 'Transport',      'type' => 'expense', 'icon' => '🚗', 'color' => '#f97316'],
+            ['id' => 7,  'name' => 'Mieszkanie',     'type' => 'expense', 'icon' => '🏠', 'color' => '#eab308'],
+            ['id' => 8,  'name' => 'Rozrywka',       'type' => 'expense', 'icon' => '🎮', 'color' => '#a855f7'],
+            ['id' => 9,  'name' => 'Zdrowie',        'type' => 'expense', 'icon' => '💊', 'color' => '#ec4899'],
+            ['id' => 10, 'name' => 'Ubrania',        'type' => 'expense', 'icon' => '👗', 'color' => '#14b8a6'],
+            ['id' => 11, 'name' => 'Edukacja',       'type' => 'expense', 'icon' => '📚', 'color' => '#3b82f6'],
+            ['id' => 12, 'name' => 'Inne wydatki',   'type' => 'expense', 'icon' => '🛒', 'color' => '#6b7280'],
+        ],
+        'transactions' => [],
+        'budgets' => [],
+        'savings_goals' => [],
+        'next_ids' => [
+            'categories' => 13,
+            'transactions' => 1,
+            'budgets' => 1,
+            'savings_goals' => 1
+        ]
+    ];
+    saveData($defaultData);
+    return $defaultData;
+}
+
+/**
+ * Generuje nowe ID dla danej kolekcji.
+ */
+function nextId(array &$data, string $collection): int {
+    $id = $data['next_ids'][$collection];
+    $data['next_ids'][$collection]++;
+    return $id;
 }

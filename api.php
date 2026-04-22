@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// api.php — REST API dla aplikacji budżetu domowego
+// api.php — REST API dla aplikacji budżetu domowego (JSON)
 // ============================================================
 
 header('Content-Type: application/json; charset=utf-8');
@@ -28,62 +28,50 @@ function err(string $msg, int $code = 400): void {
 }
 
 try {
-    $db = getDB();
+    $allData = loadData();
 
     // ── TRANSACTIONS ─────────────────────────────────────────
     if ($resource === 'transactions') {
-
         if ($method === 'GET') {
-            $where  = [];
-            $params = [];
+            $transactions = $allData['transactions'];
+            $categories   = $allData['categories'];
+            $catMap       = [];
+            foreach ($categories as $c) $catMap[$c['id']] = $c;
 
-            if (!empty($_GET['type'])) {
-                $where[] = 't.type = ?';
-                $params[] = $_GET['type'];
+            // Enrich with category info
+            foreach ($transactions as &$t) {
+                $c = $catMap[$t['category_id'] ?? 0] ?? null;
+                $t['category_name']  = $c ? $c['name']  : 'Brak';
+                $t['category_icon']  = $c ? $c['icon']  : '💰';
+                $t['category_color'] = $c ? $c['color'] : '#666';
             }
-            if (!empty($_GET['category_id'])) {
-                $where[] = 't.category_id = ?';
-                $params[] = (int)$_GET['category_id'];
-            }
-            if (!empty($_GET['month']) && !empty($_GET['year'])) {
-                $where[] = 'MONTH(t.date) = ? AND YEAR(t.date) = ?';
-                $params[] = (int)$_GET['month'];
-                $params[] = (int)$_GET['year'];
-            }
-            if (!empty($_GET['date_from'])) {
-                $where[] = 't.date >= ?';
-                $params[] = $_GET['date_from'];
-            }
-            if (!empty($_GET['date_to'])) {
-                $where[] = 't.date <= ?';
-                $params[] = $_GET['date_to'];
-            }
-            if (!empty($_GET['search'])) {
-                $where[] = 't.description LIKE ?';
-                $params[] = '%' . $_GET['search'] . '%';
-            }
+            unset($t);
 
-            $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
-            $limit    = min((int)($_GET['limit'] ?? 50), 500);
-            $offset   = (int)($_GET['offset'] ?? 0);
+            // Filtering
+            $transactions = array_filter($transactions, function($t) {
+                if (!empty($_GET['type']) && $t['type'] !== $_GET['type']) return false;
+                if (!empty($_GET['category_id']) && $t['category_id'] != $_GET['category_id']) return false;
+                if (!empty($_GET['month']) && !empty($_GET['year'])) {
+                    $d = strtotime($t['date']);
+                    if (date('n', $d) != $_GET['month'] || date('Y', $d) != $_GET['year']) return false;
+                }
+                if (!empty($_GET['date_from']) && $t['date'] < $_GET['date_from']) return false;
+                if (!empty($_GET['date_to']) && $t['date'] > $_GET['date_to']) return false;
+                if (!empty($_GET['search'])) {
+                    if (stripos($t['description'] ?? '', $_GET['search']) === false) return false;
+                }
+                return true;
+            });
 
-            $sql = "SELECT t.*, c.name AS category_name, c.icon AS category_icon, c.color AS category_color
-                    FROM transactions t
-                    LEFT JOIN categories c ON t.category_id = c.id
-                    $whereSQL
-                    ORDER BY t.date DESC, t.id DESC
-                    LIMIT $limit OFFSET $offset";
+            // Sorting (newest first)
+            usort($transactions, fn($a, $b) => strcmp($b['date'], $a['date']) ?: ($b['id'] - $a['id']));
 
-            $stmt = $db->prepare($sql);
-            $stmt->execute($params);
-            $rows = $stmt->fetchAll();
+            $total  = count($transactions);
+            $limit  = min((int)($_GET['limit'] ?? 50), 500);
+            $offset = (int)($_GET['offset'] ?? 0);
+            $paged  = array_slice($transactions, $offset, $limit);
 
-            // total count
-            $cntStmt = $db->prepare("SELECT COUNT(*) FROM transactions t $whereSQL");
-            $cntStmt->execute($params);
-            $total = (int)$cntStmt->fetchColumn();
-
-            respond(['data' => $rows, 'total' => $total, 'limit' => $limit, 'offset' => $offset]);
+            respond(['data' => $paged, 'total' => $total, 'limit' => $limit, 'offset' => $offset]);
         }
 
         if ($method === 'POST') {
@@ -91,163 +79,210 @@ try {
             foreach ($required as $f) {
                 if (empty($input[$f])) err("Pole '$f' jest wymagane.");
             }
-            if (!in_array($input['type'], ['income','expense'])) err('Nieprawidłowy typ transakcji.');
-            if ((float)$input['amount'] <= 0) err('Kwota musi być dodatnia.');
-
-            $stmt = $db->prepare("INSERT INTO transactions (category_id, type, amount, description, date, note)
-                                  VALUES (?,?,?,?,?,?)");
-            $stmt->execute([
-                $input['category_id'] ?? null,
-                $input['type'],
-                (float)$input['amount'],
-                trim($input['description'] ?? ''),
-                $input['date'],
-                trim($input['note'] ?? ''),
-            ]);
-            respond(['id' => $db->lastInsertId(), 'message' => 'Transakcja dodana.'], 201);
+            $newTransaction = [
+                'id'          => nextId($allData, 'transactions'),
+                'category_id' => isset($input['category_id']) ? (int)$input['category_id'] : null,
+                'type'        => $input['type'],
+                'amount'      => (float)$input['amount'],
+                'description' => trim($input['description'] ?? ''),
+                'date'        => $input['date'],
+                'note'        => trim($input['note'] ?? ''),
+                'created_at'  => date('Y-m-d H:i:s')
+            ];
+            $allData['transactions'][] = $newTransaction;
+            saveData($allData);
+            respond(['id' => $newTransaction['id'], 'message' => 'Transakcja dodana.'], 201);
         }
 
         if ($method === 'PUT' && $id) {
-            $stmt = $db->prepare("UPDATE transactions SET category_id=?, type=?, amount=?, description=?, date=?, note=? WHERE id=?");
-            $stmt->execute([
-                $input['category_id'] ?? null,
-                $input['type'],
-                (float)$input['amount'],
-                trim($input['description'] ?? ''),
-                $input['date'],
-                trim($input['note'] ?? ''),
-                $id,
-            ]);
-            respond(['message' => 'Transakcja zaktualizowana.']);
+            $found = false;
+            foreach ($allData['transactions'] as &$t) {
+                if ($t['id'] === $id) {
+                    $t['category_id'] = isset($input['category_id']) ? (int)$input['category_id'] : $t['category_id'];
+                    $t['type']        = $input['type'] ?? $t['type'];
+                    $t['amount']      = isset($input['amount']) ? (float)$input['amount'] : $t['amount'];
+                    $t['description'] = trim($input['description'] ?? $t['description']);
+                    $t['date']        = $input['date'] ?? $t['date'];
+                    $t['note']        = trim($input['note'] ?? $t['note']);
+                    $found = true;
+                    break;
+                }
+            }
+            if ($found) {
+                saveData($allData);
+                respond(['message' => 'Transakcja zaktualizowana.']);
+            }
+            err('Nie znaleziono transakcji.', 404);
         }
 
         if ($method === 'DELETE' && $id) {
-            $db->prepare("DELETE FROM transactions WHERE id=?")->execute([$id]);
+            $allData['transactions'] = array_filter($allData['transactions'], fn($t) => $t['id'] !== $id);
+            saveData($allData);
             respond(['message' => 'Transakcja usunięta.']);
         }
     }
 
     // ── CATEGORIES ───────────────────────────────────────────
     if ($resource === 'categories') {
-
         if ($method === 'GET') {
             $type = $_GET['type'] ?? null;
+            $cats = $allData['categories'];
             if ($type) {
-                $stmt = $db->prepare("SELECT * FROM categories WHERE type=? ORDER BY name");
-                $stmt->execute([$type]);
-            } else {
-                $stmt = $db->query("SELECT * FROM categories ORDER BY type, name");
+                $cats = array_filter($cats, fn($c) => $c['type'] === $type);
             }
-            respond(['data' => $stmt->fetchAll()]);
+            usort($cats, fn($a, $b) => strcmp($a['name'], $b['name']));
+            respond(['data' => array_values($cats)]);
         }
 
         if ($method === 'POST') {
             if (empty($input['name'])) err('Nazwa kategorii jest wymagana.');
-            if (!in_array($input['type'] ?? '', ['income','expense'])) err('Nieprawidłowy typ kategorii.');
-            $stmt = $db->prepare("INSERT INTO categories (name, type, icon, color) VALUES (?,?,?,?)");
-            $stmt->execute([
-                trim($input['name']),
-                $input['type'],
-                $input['icon']  ?? '💰',
-                $input['color'] ?? '#6366f1',
-            ]);
-            respond(['id' => $db->lastInsertId(), 'message' => 'Kategoria dodana.'], 201);
+            $newCat = [
+                'id'    => nextId($allData, 'categories'),
+                'name'  => trim($input['name']),
+                'type'  => $input['type'],
+                'icon'  => $input['icon']  ?? '💰',
+                'color' => $input['color'] ?? '#6366f1'
+            ];
+            $allData['categories'][] = $newCat;
+            saveData($allData);
+            respond(['id' => $newCat['id'], 'message' => 'Kategoria dodana.'], 201);
         }
 
         if ($method === 'PUT' && $id) {
-            $stmt = $db->prepare("UPDATE categories SET name=?, type=?, icon=?, color=? WHERE id=?");
-            $stmt->execute([trim($input['name']), $input['type'], $input['icon'] ?? '💰', $input['color'] ?? '#6366f1', $id]);
-            respond(['message' => 'Kategoria zaktualizowana.']);
+            foreach ($allData['categories'] as &$c) {
+                if ($c['id'] === $id) {
+                    $c['name']  = trim($input['name'] ?? $c['name']);
+                    $c['type']  = $input['type'] ?? $c['type'];
+                    $c['icon']  = $input['icon'] ?? $c['icon'];
+                    $c['color'] = $input['color'] ?? $c['color'];
+                    saveData($allData);
+                    respond(['message' => 'Kategoria zaktualizowana.']);
+                }
+            }
+            err('Nie znaleziono kategorii.', 404);
         }
 
         if ($method === 'DELETE' && $id) {
-            $db->prepare("DELETE FROM categories WHERE id=?")->execute([$id]);
+            $allData['categories'] = array_filter($allData['categories'], fn($c) => $c['id'] !== $id);
+            saveData($allData);
             respond(['message' => 'Kategoria usunięta.']);
         }
     }
 
     // ── BUDGETS ──────────────────────────────────────────────
     if ($resource === 'budgets') {
-
         if ($method === 'GET') {
             $month = (int)($_GET['month'] ?? date('n'));
             $year  = (int)($_GET['year']  ?? date('Y'));
 
-            $stmt = $db->prepare("
-                SELECT b.*, c.name AS category_name, c.icon, c.color,
-                       COALESCE((
-                           SELECT SUM(amount) FROM transactions
-                           WHERE category_id = b.category_id
-                             AND MONTH(date) = b.month
-                             AND YEAR(date)  = b.year
-                             AND type = 'expense'
-                       ), 0) AS spent
-                FROM budgets b
-                JOIN categories c ON b.category_id = c.id
-                WHERE b.month = ? AND b.year = ?
-                ORDER BY c.name
-            ");
-            $stmt->execute([$month, $year]);
-            respond(['data' => $stmt->fetchAll(), 'month' => $month, 'year' => $year]);
+            $budgets    = array_filter($allData['budgets'], fn($b) => $b['month'] == $month && $b['year'] == $year);
+            $categories = $allData['categories'];
+            $catMap     = [];
+            foreach ($categories as $c) $catMap[$c['id']] = $c;
+
+            $enriched = [];
+            foreach ($budgets as $b) {
+                $c = $catMap[$b['category_id']] ?? null;
+                if (!$c) continue;
+                
+                // Calculate spent
+                $spent = 0;
+                foreach ($allData['transactions'] as $t) {
+                    if ($t['category_id'] == $b['category_id'] && $t['type'] === 'expense') {
+                        $td = strtotime($t['date']);
+                        if (date('n', $td) == $month && date('Y', $td) == $year) {
+                            $spent += $t['amount'];
+                        }
+                    }
+                }
+
+                $b['category_name'] = $c['name'];
+                $b['icon']          = $c['icon'];
+                $b['color']         = $c['color'];
+                $b['spent']         = $spent;
+                $enriched[] = $b;
+            }
+            respond(['data' => $enriched, 'month' => $month, 'year' => $year]);
         }
 
         if ($method === 'POST') {
             if (empty($input['category_id']) || empty($input['amount'])) err('Wymagane: category_id, amount.');
             $month = (int)($input['month'] ?? date('n'));
             $year  = (int)($input['year']  ?? date('Y'));
+            $catId = (int)$input['category_id'];
 
-            $stmt = $db->prepare("INSERT INTO budgets (category_id, amount, month, year)
-                                  VALUES (?,?,?,?)
-                                  ON DUPLICATE KEY UPDATE amount=VALUES(amount)");
-            $stmt->execute([$input['category_id'], (float)$input['amount'], $month, $year]);
+            $found = false;
+            foreach ($allData['budgets'] as &$b) {
+                if ($b['category_id'] == $catId && $b['month'] == $month && $b['year'] == $year) {
+                    $b['amount'] = (float)$input['amount'];
+                    $found = true;
+                    break;
+                }
+            }
+            if (!$found) {
+                $allData['budgets'][] = [
+                    'id'          => nextId($allData, 'budgets'),
+                    'category_id' => $catId,
+                    'amount'      => (float)$input['amount'],
+                    'month'       => $month,
+                    'year'        => $year
+                ];
+            }
+            saveData($allData);
             respond(['message' => 'Budżet zapisany.'], 201);
         }
 
         if ($method === 'DELETE' && $id) {
-            $db->prepare("DELETE FROM budgets WHERE id=?")->execute([$id]);
+            $allData['budgets'] = array_filter($allData['budgets'], fn($b) => $b['id'] !== $id);
+            saveData($allData);
             respond(['message' => 'Budżet usunięty.']);
         }
     }
 
     // ── SAVINGS GOALS ────────────────────────────────────────
     if ($resource === 'savings') {
-
         if ($method === 'GET') {
-            $rows = $db->query("SELECT * FROM savings_goals ORDER BY created_at DESC")->fetchAll();
-            respond(['data' => $rows]);
+            $goals = $allData['savings_goals'];
+            usort($goals, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+            respond(['data' => array_values($goals)]);
         }
 
         if ($method === 'POST') {
             if (empty($input['name']) || empty($input['target_amount'])) err('Wymagane: name, target_amount.');
-            $stmt = $db->prepare("INSERT INTO savings_goals (name, target_amount, saved_amount, deadline, icon, color)
-                                  VALUES (?,?,?,?,?,?)");
-            $stmt->execute([
-                trim($input['name']),
-                (float)$input['target_amount'],
-                (float)($input['saved_amount'] ?? 0),
-                $input['deadline'] ?? null,
-                $input['icon']  ?? '🎯',
-                $input['color'] ?? '#10b981',
-            ]);
-            respond(['id' => $db->lastInsertId(), 'message' => 'Cel dodany.'], 201);
+            $newGoal = [
+                'id'            => nextId($allData, 'savings_goals'),
+                'name'          => trim($input['name']),
+                'target_amount' => (float)$input['target_amount'],
+                'saved_amount'  => (float)($input['saved_amount'] ?? 0),
+                'deadline'      => $input['deadline'] ?? null,
+                'icon'          => $input['icon']  ?? '🎯',
+                'color'         => $input['color'] ?? '#10b981',
+                'created_at'    => date('Y-m-d H:i:s')
+            ];
+            $allData['savings_goals'][] = $newGoal;
+            saveData($allData);
+            respond(['id' => $newGoal['id'], 'message' => 'Cel dodany.'], 201);
         }
 
         if ($method === 'PUT' && $id) {
-            $stmt = $db->prepare("UPDATE savings_goals SET name=?, target_amount=?, saved_amount=?, deadline=?, icon=?, color=? WHERE id=?");
-            $stmt->execute([
-                trim($input['name']),
-                (float)$input['target_amount'],
-                (float)($input['saved_amount'] ?? 0),
-                $input['deadline'] ?? null,
-                $input['icon']  ?? '🎯',
-                $input['color'] ?? '#10b981',
-                $id,
-            ]);
-            respond(['message' => 'Cel zaktualizowany.']);
+            foreach ($allData['savings_goals'] as &$g) {
+                if ($g['id'] === $id) {
+                    $g['name']          = trim($input['name'] ?? $g['name']);
+                    $g['target_amount'] = isset($input['target_amount']) ? (float)$input['target_amount'] : $g['target_amount'];
+                    $g['saved_amount']  = isset($input['saved_amount']) ? (float)$input['saved_amount'] : $g['saved_amount'];
+                    $g['deadline']      = $input['deadline'] ?? $g['deadline'];
+                    $g['icon']          = $input['icon'] ?? $g['icon'];
+                    $g['color']         = $input['color'] ?? $g['color'];
+                    saveData($allData);
+                    respond(['message' => 'Cel zaktualizowany.']);
+                }
+            }
+            err('Nie znaleziono celu.', 404);
         }
 
         if ($method === 'DELETE' && $id) {
-            $db->prepare("DELETE FROM savings_goals WHERE id=?")->execute([$id]);
+            $allData['savings_goals'] = array_filter($allData['savings_goals'], fn($g) => $g['id'] !== $id);
+            saveData($allData);
             respond(['message' => 'Cel usunięty.']);
         }
     }
@@ -257,57 +292,70 @@ try {
         $month = (int)($_GET['month'] ?? date('n'));
         $year  = (int)($_GET['year']  ?? date('Y'));
 
-        // Suma przychodów i wydatków bieżącego miesiąca
-        $summaryStmt = $db->prepare("
-            SELECT type, SUM(amount) AS total
-            FROM transactions
-            WHERE MONTH(date) = ? AND YEAR(date) = ?
-            GROUP BY type
-        ");
-        $summaryStmt->execute([$month, $year]);
         $summary = ['income' => 0, 'expense' => 0];
-        foreach ($summaryStmt->fetchAll() as $row) {
-            $summary[$row['type']] = (float)$row['total'];
+        $byCategory = [];
+        $catMap = [];
+        foreach ($allData['categories'] as $c) $catMap[$c['id']] = $c;
+
+        foreach ($allData['transactions'] as $t) {
+            $td = strtotime($t['date']);
+            $tm = (int)date('n', $td);
+            $ty = (int)date('Y', $td);
+
+            if ($tm === $month && $ty === $year) {
+                $summary[$t['type']] += $t['amount'];
+
+                $catId = $t['category_id'] ?? 0;
+                $cat = $catMap[$catId] ?? ['name' => 'Inne', 'icon' => '💰', 'color' => '#666'];
+                $key = $catId . '_' . $t['type'];
+                if (!isset($byCategory[$key])) {
+                    $byCategory[$key] = [
+                        'name'  => $cat['name'],
+                        'icon'  => $cat['icon'],
+                        'color' => $cat['color'],
+                        'type'  => $t['type'],
+                        'total' => 0
+                    ];
+                }
+                $byCategory[$key]['total'] += $t['amount'];
+            }
         }
         $summary['balance'] = $summary['income'] - $summary['expense'];
 
-        // Wydatki per kategoria (bieżący miesiąc)
-        $catStmt = $db->prepare("
-            SELECT c.name, c.icon, c.color, t.type, SUM(t.amount) AS total
-            FROM transactions t
-            JOIN categories c ON t.category_id = c.id
-            WHERE MONTH(t.date) = ? AND YEAR(t.date) = ?
-            GROUP BY t.category_id, t.type
-            ORDER BY total DESC
-        ");
-        $catStmt->execute([$month, $year]);
-        $byCategory = $catStmt->fetchAll();
+        // Trend 12 months
+        $trend = [];
+        $startDate = strtotime("-11 months", strtotime("$year-$month-01"));
+        for ($i = 0; $i < 12; $i++) {
+            $m = (int)date('n', strtotime("+$i months", $startDate));
+            $y = (int)date('Y', strtotime("+$i months", $startDate));
+            
+            $inc = 0; $exp = 0;
+            foreach ($allData['transactions'] as $t) {
+                $td = strtotime($t['date']);
+                if ((int)date('n', $td) === $m && (int)date('Y', $td) === $y) {
+                    if ($t['type'] === 'income') $inc += $t['amount'];
+                    else $exp += $t['amount'];
+                }
+            }
+            $trend[] = ['y' => $y, 'm' => $m, 'type' => 'income',  'total' => $inc];
+            $trend[] = ['y' => $y, 'm' => $m, 'type' => 'expense', 'total' => $exp];
+        }
 
-        // Trend 12 miesięcy
-        $trendStmt = $db->prepare("
-            SELECT YEAR(date) AS y, MONTH(date) AS m, type, SUM(amount) AS total
-            FROM transactions
-            WHERE date >= DATE_SUB(?, INTERVAL 11 MONTH)
-            GROUP BY y, m, type
-            ORDER BY y, m
-        ");
-        $trendStmt->execute(["$year-$month-01"]);
-        $trend = $trendStmt->fetchAll();
-
-        // Ostatnie 5 transakcji
-        $recentStmt = $db->prepare("
-            SELECT t.*, c.name AS category_name, c.icon, c.color
-            FROM transactions t
-            LEFT JOIN categories c ON t.category_id = c.id
-            ORDER BY t.date DESC, t.id DESC
-            LIMIT 5
-        ");
-        $recentStmt->execute();
-        $recent = $recentStmt->fetchAll();
+        // Recent 5
+        $recent = $allData['transactions'];
+        foreach ($recent as &$r) {
+            $c = $catMap[$r['category_id'] ?? 0] ?? null;
+            $r['category_name'] = $c ? $c['name'] : 'Inne';
+            $r['icon']          = $c ? $c['icon'] : '💰';
+            $r['color']         = $c ? $c['color'] : '#666';
+        }
+        unset($r);
+        usort($recent, fn($a, $b) => strcmp($b['date'], $a['date']) ?: ($b['id'] - $a['id']));
+        $recent = array_slice($recent, 0, 5);
 
         respond([
             'summary'     => $summary,
-            'by_category' => $byCategory,
+            'by_category' => array_values($byCategory),
             'trend'       => $trend,
             'recent'      => $recent,
             'month'       => $month,
@@ -317,6 +365,6 @@ try {
 
     err('Nieznany zasób API.', 404);
 
-} catch (PDOException $e) {
-    err('Błąd bazy danych: ' . $e->getMessage(), 500);
+} catch (Exception $e) {
+    err('Błąd serwera: ' . $e->getMessage(), 500);
 }
