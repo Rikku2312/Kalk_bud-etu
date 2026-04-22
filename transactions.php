@@ -135,12 +135,27 @@ const LIMIT       = 20;
 async function loadCategories() {
   const data = await apiFetch('categories');
   allCategories = data.data || [];
-  const fCat  = document.getElementById('filterCategory');
-  const fsCat = document.getElementById('fCategory');
+  const fCat = document.getElementById('filterCategory');
   allCategories.forEach(c => {
     fCat.add(new Option(`${c.icon} ${c.name}`, c.id));
-    fsCat.add(new Option(`${c.icon} ${c.name}`, c.id));
   });
+}
+
+function updateModalCategories(type) {
+  const sel = document.getElementById('fCategory');
+  const val = sel.value;
+  sel.innerHTML = '<option value="">— bez kategorii —</option>';
+  
+  const filtered = allCategories.filter(c => c.type === type);
+  if (allCategories.length > 0 && filtered.length === 0) {
+    console.warn('No categories found for type:', type);
+  }
+
+  filtered.forEach(c => {
+    const opt = new Option(`${c.icon} ${c.name}`, c.id);
+    sel.add(opt);
+  });
+  sel.value = val;
 }
 
 // ── Filter helpers ─────────────────────────────────────────
@@ -229,16 +244,27 @@ document.getElementById('clearFilters').addEventListener('click', () => {
 });
 
 // ── Modal ──────────────────────────────────────────────────
-function openModal(id = null) {
+function openModal(id = null, data = null) {
   editingId = id;
   document.getElementById('modalTitle').textContent = id ? 'Edytuj transakcję' : 'Nowa transakcja';
-  if (!id) {
-    document.getElementById('typeExpense').checked = true;
-    document.getElementById('fAmount').value = '';
-    document.getElementById('fDate').value   = new Date().toISOString().split('T')[0];
+  
+  const type = data ? data.type : 'expense';
+  document.getElementById(type === 'income' ? 'typeIncome' : 'typeExpense').checked = true;
+  
+  updateModalCategories(type);
+  
+  if (data) {
+    document.getElementById('fAmount').value   = data.amount;
+    document.getElementById('fDate').value     = data.date;
+    document.getElementById('fCategory').value = data.category_id || '';
+    document.getElementById('fDesc').value     = data.description || '';
+    document.getElementById('fNote').value     = data.note || '';
+  } else {
+    document.getElementById('fAmount').value   = '';
+    document.getElementById('fDate').value     = new Date().toISOString().split('T')[0];
     document.getElementById('fCategory').value = '';
-    document.getElementById('fDesc').value = '';
-    document.getElementById('fNote').value = '';
+    document.getElementById('fDesc').value     = '';
+    document.getElementById('fNote').value     = '';
   }
   document.getElementById('transModal').classList.add('open');
 }
@@ -250,20 +276,14 @@ document.getElementById('cancelModal').addEventListener('click', closeModal);
 
 // ── Edit ───────────────────────────────────────────────────
 async function editTrans(id) {
-  const data = await apiFetch('transactions', { limit:1, offset:0 });
-  // Fetch single by re-querying all and filtering — simpler approach:
-  const res = await fetch(`api.php?resource=transactions&limit=500`);
-  const all  = await res.json();
-  const row  = (all.data || []).find(r => r.id == id);
-  if (!row) return;
-
-  document.getElementById(row.type==='income' ? 'typeIncome' : 'typeExpense').checked = true;
-  document.getElementById('fAmount').value   = row.amount;
-  document.getElementById('fDate').value     = row.date;
-  document.getElementById('fCategory').value = row.category_id || '';
-  document.getElementById('fDesc').value     = row.description || '';
-  document.getElementById('fNote').value     = row.note || '';
-  openModal(id);
+  // Fetch all to find the one we need (simpler than adding a single-fetch API endpoint now)
+  const data = await apiFetch('transactions', { limit: 500 });
+  const row  = (data.data || []).find(r => r.id == id);
+  if (!row) {
+    toast('Nie znaleziono transakcji.', 'error');
+    return;
+  }
+  openModal(id, row);
 }
 
 // ── Save ───────────────────────────────────────────────────
@@ -316,10 +336,7 @@ document.getElementById('exportCSV').addEventListener('click', async () => {
 // ── Update category options on type change ─────────────────
 document.querySelectorAll('input[name="type"]').forEach(r => {
   r.addEventListener('change', () => {
-    const type = r.value;
-    const sel  = document.getElementById('fCategory');
-    sel.innerHTML = '<option value="">— bez kategorii —</option>';
-    allCategories.filter(c => c.type === type).forEach(c => sel.add(new Option(`${c.icon} ${c.name}`, c.id)));
+    updateModalCategories(r.value);
   });
 });
 

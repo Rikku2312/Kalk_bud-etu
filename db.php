@@ -58,12 +58,23 @@ function initializeData(): array {
             ['id' => 11, 'name' => 'Edukacja',       'type' => 'expense', 'icon' => '📚', 'color' => '#3b82f6'],
             ['id' => 12, 'name' => 'Inne wydatki',   'type' => 'expense', 'icon' => '🛒', 'color' => '#6b7280'],
         ],
-        'transactions' => [],
+        'transactions' => [
+            [
+                'id'          => 1,
+                'category_id' => 4, // Inne przychody
+                'type'        => 'income',
+                'amount'      => 10000.0,
+                'description' => 'Bilans początkowy',
+                'date'        => date('Y-m-d'),
+                'note'        => 'Automatyczny bilans początkowy',
+                'created_at'  => date('Y-m-d H:i:s')
+            ]
+        ],
         'budgets' => [],
         'savings_goals' => [],
         'next_ids' => [
             'categories' => 13,
-            'transactions' => 1,
+            'transactions' => 2,
             'budgets' => 1,
             'savings_goals' => 1
         ]
