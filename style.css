@@ -4,11 +4,11 @@
   --panel-border: rgba(255, 255, 255, 0.08);
   --text-main: #f3f4f6;
   --text-muted: #9ca3af;
-  
+
   --primary: #6366f1;
   --primary-hover: #4f46e5;
   --accent: #8b5cf6;
-  
+
   --success: #10b981;
   --danger: #ef4444;
   --warning: #f59e0b;
@@ -26,7 +26,7 @@ body {
   font-family: 'Inter', sans-serif;
   background-color: var(--bg-color);
   color: var(--text-main);
-  background-image: 
+  background-image:
     radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
     radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.15) 0px, transparent 50%);
   background-attachment: fixed;
@@ -86,7 +86,8 @@ body {
   font-weight: 500;
 }
 
-.nav-item:hover, .nav-item.active {
+.nav-item:hover,
+.nav-item.active {
   background: rgba(99, 102, 241, 0.1);
   color: var(--primary);
 }
@@ -154,8 +155,15 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Dashboard Summary */
@@ -193,9 +201,20 @@ body {
   background: rgba(255, 255, 255, 0.05);
 }
 
-.income .card-icon { color: var(--success); background: rgba(16, 185, 129, 0.1); }
-.expense .card-icon { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
-.balance .card-icon { color: var(--primary); background: rgba(99, 102, 241, 0.1); }
+.income .card-icon {
+  color: var(--success);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.expense .card-icon {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.balance .card-icon {
+  color: var(--primary);
+  background: rgba(99, 102, 241, 0.1);
+}
 
 .card-info h3 {
   font-size: 0.9rem;
@@ -210,7 +229,8 @@ body {
 }
 
 .balance .card-info p {
-  color: var(--success); /* Will be set dynamically */
+  color: var(--success);
+  /* Will be set dynamically */
 }
 
 /* Charts Grid */
@@ -289,7 +309,10 @@ body {
 /* Modals */
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   z-index: 1000;
@@ -332,7 +355,9 @@ body {
   cursor: pointer;
 }
 
-.close-btn:hover { color: white; }
+.close-btn:hover {
+  color: white;
+}
 
 /* Forms */
 .form-group {
@@ -385,7 +410,8 @@ body {
   border-collapse: collapse;
 }
 
-.data-table th, .data-table td {
+.data-table th,
+.data-table td {
   padding: 14px;
   text-align: left;
   border-bottom: 1px solid var(--panel-border);
@@ -410,11 +436,19 @@ body {
   font-weight: 600;
 }
 
-.badge.income { background: rgba(16, 185, 129, 0.15); color: var(--success); }
-.badge.expense { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+.badge.income {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--success);
+}
+
+.badge.expense {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+}
 
 /* Budgets & Savings Grid */
-.budgets-grid, .savings-grid {
+.budgets-grid,
+.savings-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.5rem;
@@ -462,11 +496,28 @@ body {
   border-bottom: 1px solid var(--panel-border);
 }
 
-.recent-item:last-child { border-bottom: none; }
-.recent-info { display: flex; align-items: center; gap: 12px; }
-.recent-icon { font-size: 1.4rem; }
-.recent-desc { font-weight: 500; }
-.recent-cat { font-size: 0.8rem; color: var(--text-muted); }
+.recent-item:last-child {
+  border-bottom: none;
+}
+
+.recent-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.recent-icon {
+  font-size: 1.4rem;
+}
+
+.recent-desc {
+  font-weight: 500;
+}
+
+.recent-cat {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
 
 /* Delete Btn */
 .btn-delete {
@@ -477,4 +528,7 @@ body {
   padding: 4px;
   border-radius: 4px;
 }
-.btn-delete:hover { background: rgba(239, 68, 68, 0.1); }
+
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.1);
+}

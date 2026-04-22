@@ -62,19 +62,19 @@ navItems.forEach(item => {
   item.addEventListener('click', (e) => {
     e.preventDefault();
     const target = item.dataset.target;
-    
+
     // Update active nav
     navItems.forEach(n => n.classList.remove('active'));
     item.classList.add('active');
-    
+
     // Update active page
     pages.forEach(p => p.classList.remove('active'));
     document.getElementById(`page-${target}`).classList.add('active');
-    
+
     // Update headers
     pageTitle.textContent = pageTitles[target].title;
     pageSubtitle.textContent = pageTitles[target].sub;
-    
+
     // Refresh Data
     refreshViews();
   });
@@ -122,18 +122,13 @@ let expenseChartInstance = null;
 
 function refreshViews() {
   const data = getData();
-  
+
   // Calculations
   let income = 0, expense = 0;
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  
+
   data.transactions.forEach(t => {
-    const d = new Date(t.date);
-    if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
-      if (t.type === 'income') income += Number(t.amount);
-      if (t.type === 'expense') expense += Number(t.amount);
-    }
+    if (t.type === 'income') income += Number(t.amount);
+    if (t.type === 'expense') expense += Number(t.amount);
   });
 
   const balance = income - expense;
@@ -144,9 +139,9 @@ function refreshViews() {
   document.getElementById('dashBalance').textContent = fmtPLN(balance);
   document.getElementById('dashBalance').style.color = balance >= 0 ? 'var(--success)' : 'var(--danger)';
 
-  renderChart(data.transactions, currentMonth, currentYear);
+  renderChart(data.transactions);
   renderRecent(data.transactions);
-  
+
   // Render other pages
   renderTransactions(data.transactions);
   renderBudgets(data);
@@ -160,7 +155,7 @@ function getCategory(id) {
 function renderRecent(transactions) {
   const list = document.getElementById('dashRecentList');
   const recent = [...transactions].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
-  
+
   if (recent.length === 0) {
     list.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px;">Brak transakcji</p>';
     return;
@@ -189,9 +184,9 @@ function renderTransactions(transactions) {
   const tbody = document.getElementById('transactionsTableBody');
   const filterType = document.getElementById('filterType').value;
   const search = document.getElementById('searchTransaction').value.toLowerCase();
-  
+
   let filtered = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
-  
+
   if (filterType !== 'all') filtered = filtered.filter(t => t.type === filterType);
   if (search) filtered = filtered.filter(t => t.description.toLowerCase().includes(search));
 
@@ -205,7 +200,7 @@ function renderTransactions(transactions) {
     const sign = t.type === 'income' ? '+' : '-';
     const badgeCls = t.type === 'income' ? 'income' : 'expense';
     const typeLabel = t.type === 'income' ? 'Przychód' : 'Wydatek';
-    
+
     return `
       <tr>
         <td>${fmtDate(t.date)}</td>
@@ -225,7 +220,7 @@ function renderBudgets(data) {
   const grid = document.getElementById('budgetsGrid');
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
-  
+
   if (data.budgets.length === 0) {
     grid.innerHTML = '<div style="grid-column: 1/-1;text-align:center;color:var(--text-muted);padding:2rem;">Brak limitów budżetowych. Ustaw pierwszy limit!</div>';
     return;
@@ -241,10 +236,10 @@ function renderBudgets(data) {
         spent += Number(t.amount);
       }
     });
-    
+
     const pct = Math.min((spent / b.amount) * 100, 100);
     const color = pct < 75 ? 'var(--success)' : pct < 100 ? 'var(--warning)' : 'var(--danger)';
-    
+
     return `
       <div class="glass-panel">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
@@ -291,27 +286,24 @@ function renderSavings(savings) {
   }).join('');
 }
 
-function renderChart(transactions, month, year) {
+function renderChart(transactions) {
   const ctx = document.getElementById('expenseChart').getContext('2d');
-  
-  // Aggregate expenses by category
-  const expenses = {};
+
+  // Aggregate by category
+  const categories = {};
   transactions.forEach(t => {
-    const d = new Date(t.date);
-    if (t.type === 'expense' && d.getMonth() === month && d.getFullYear() === year) {
-      if (!expenses[t.categoryId]) expenses[t.categoryId] = 0;
-      expenses[t.categoryId] += Number(t.amount);
-    }
+    if (!categories[t.categoryId]) categories[t.categoryId] = 0;
+    categories[t.categoryId] += Number(t.amount);
   });
 
   const labels = [];
   const data = [];
   const bgColors = [];
 
-  Object.keys(expenses).forEach(catId => {
+  Object.keys(categories).forEach(catId => {
     const cat = getCategory(catId);
     labels.push(cat.name);
-    data.push(expenses[catId]);
+    data.push(categories[catId]);
     bgColors.push(cat.color);
   });
 
@@ -356,7 +348,7 @@ document.getElementById('transactionForm').addEventListener('submit', (e) => {
     amount: document.getElementById('transAmount').value,
     description: document.getElementById('transDesc').value,
     categoryId: document.getElementById('transCategory').value,
-    date: document.getElementById('transDate').value,
+    date: new Date().toISOString().split('T')[0],
     timestamp: Date.now()
   };
   data.transactions.push(newTrans);
@@ -371,7 +363,7 @@ document.getElementById('budgetForm').addEventListener('submit', (e) => {
   const data = getData();
   const catId = document.getElementById('budgetCategory').value;
   const amount = document.getElementById('budgetLimit').value;
-  
+
   // Check if exists
   const existingIndex = data.budgets.findIndex(b => b.categoryId == catId);
   if (existingIndex >= 0) {
@@ -379,7 +371,7 @@ document.getElementById('budgetForm').addEventListener('submit', (e) => {
   } else {
     data.budgets.push({ id: data.nextId++, categoryId: catId, amount: amount });
   }
-  
+
   saveData(data);
   closeModal('budgetModal');
   document.getElementById('budgetForm').reset();
@@ -395,7 +387,7 @@ document.getElementById('savingsForm').addEventListener('submit', (e) => {
     target: document.getElementById('saveTarget').value,
     current: document.getElementById('saveCurrent').value
   });
-  
+
   saveData(data);
   closeModal('savingsModal');
   document.getElementById('savingsForm').reset();
@@ -407,7 +399,7 @@ document.getElementById('filterType').addEventListener('change', () => renderTra
 document.getElementById('searchTransaction').addEventListener('input', () => renderTransactions(getData().transactions));
 
 // Delete functions
-window.deleteTransaction = function(id) {
+window.deleteTransaction = function (id) {
   if (!confirm('Usunąć tę transakcję?')) return;
   const data = getData();
   data.transactions = data.transactions.filter(t => t.id !== id);
@@ -415,7 +407,7 @@ window.deleteTransaction = function(id) {
   refreshViews();
 }
 
-window.deleteBudget = function(id) {
+window.deleteBudget = function (id) {
   if (!confirm('Usunąć ten limit?')) return;
   const data = getData();
   data.budgets = data.budgets.filter(b => b.id !== id);
@@ -423,7 +415,7 @@ window.deleteBudget = function(id) {
   refreshViews();
 }
 
-window.deleteSavings = function(id) {
+window.deleteSavings = function (id) {
   if (!confirm('Usunąć ten cel?')) return;
   const data = getData();
   data.savings = data.savings.filter(s => s.id !== id);
