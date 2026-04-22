@@ -87,6 +87,12 @@ function initializeData(): array {
  * Generuje nowe ID dla danej kolekcji.
  */
 function nextId(array &$data, string $collection): int {
+    if (!isset($data['next_ids'])) {
+        $data['next_ids'] = ['categories' => 100, 'transactions' => 100, 'budgets' => 100, 'savings_goals' => 100];
+    }
+    if (!isset($data['next_ids'][$collection])) {
+        $data['next_ids'][$collection] = 1;
+    }
     $id = $data['next_ids'][$collection];
     $data['next_ids'][$collection]++;
     return $id;
