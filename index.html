@@ -30,6 +30,13 @@
           <span class="logo-icon">💸</span>
           <span class="logo-text">Kalk Budget</span>
         </div>
+        <div class="profile-selector-container">
+          <select id="profileSelect" class="profile-select input-field">
+            <!-- Injected via JS -->
+          </select>
+          <button class="btn btn-icon btn-outline" onclick="openModal('profileModal')"
+            title="Zarządzaj profilami">⚙️</button>
+        </div>
       </div>
       <nav class="sidebar-nav">
         <a href="#" class="nav-item active" data-target="dashboard">
@@ -47,6 +54,10 @@
         <a href="#" class="nav-item" data-target="savings">
           <span class="nav-icon">🐖</span>
           <span class="nav-label">Cele</span>
+        </a>
+        <a href="#" class="nav-item" data-target="overview">
+          <span class="nav-icon">🌐</span>
+          <span class="nav-label">Przegląd</span>
         </a>
       </nav>
       <div class="sidebar-footer">
@@ -177,6 +188,67 @@
           </div>
         </section>
 
+        <!-- OVERVIEW PAGE -->
+        <section id="page-overview" class="page">
+          <!-- Profile tabs -->
+          <div class="overview-tabs-wrapper glass-panel" style="margin-bottom: 1.5rem; padding: 0.75rem 1rem;">
+            <div class="overview-tabs" id="overviewTabs">
+              <!-- Injected via JS -->
+            </div>
+          </div>
+
+          <!-- Summary cards for overview -->
+          <div class="summary-grid" id="overviewSummary" style="margin-bottom: 1.5rem;"></div>
+
+          <!-- Charts row -->
+          <div class="charts-grid" style="margin-bottom: 1.5rem;" id="overviewChartsRow">
+            <div class="chart-container glass-panel">
+              <div class="panel-header">
+                <h2 id="overviewChartTitle">Wydatki wg Kategorii</h2>
+              </div>
+              <div class="chart-wrapper"><canvas id="overviewCategoryChart"></canvas></div>
+            </div>
+            <div class="chart-container glass-panel">
+              <div class="panel-header">
+                <h2>Wydatki wg Profilu</h2>
+              </div>
+              <div class="chart-wrapper"><canvas id="overviewProfileChart"></canvas></div>
+            </div>
+          </div>
+
+          <!-- Transactions table -->
+          <div class="glass-panel">
+            <div class="panel-header filters-header">
+              <h2 id="overviewTableTitle">Wszystkie Transakcje</h2>
+              <div class="filters">
+                <select id="overviewFilterType" class="input-field">
+                  <option value="all">Wszystkie typy</option>
+                  <option value="income">Przychody</option>
+                  <option value="expense">Wydatki</option>
+                </select>
+                <input type="text" id="overviewSearch" class="input-field" placeholder="Szukaj...">
+              </div>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Profil</th>
+                    <th>Data</th>
+                    <th>Opis</th>
+                    <th>Kategoria</th>
+                    <th>Typ</th>
+                    <th>Kwota</th>
+                  </tr>
+                </thead>
+                <tbody id="overviewTableBody">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
       </div>
     </main>
   </div>
@@ -204,6 +276,10 @@
         <div class="form-group">
           <label>Opis</label>
           <input type="text" id="transDesc" class="input-field" required>
+        </div>
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" id="transDate" class="input-field" required>
         </div>
         <div class="form-group">
           <label>Kategoria</label>
@@ -271,6 +347,50 @@
           <button type="submit" class="btn btn-primary">Zapisz</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Add Funds Modal -->
+  <div class="modal-overlay" id="addFundsModal">
+    <div class="modal glass-panel">
+      <div class="modal-header">
+        <h2>Wpłać na Cel</h2>
+        <button class="close-btn" onclick="closeModal('addFundsModal')">&times;</button>
+      </div>
+      <form id="addFundsForm" class="modal-body">
+        <input type="hidden" id="addFundSaveId">
+        <div class="form-group">
+          <label>Kwota wpłaty (PLN)</label>
+          <input type="number" id="addFundAmount" class="input-field" step="0.01" required>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeModal('addFundsModal')">Anuluj</button>
+          <button type="submit" class="btn btn-primary">Zapisz</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Profile Modal -->
+  <div class="modal-overlay" id="profileModal">
+    <div class="modal glass-panel">
+      <div class="modal-header">
+        <h2>Zarządzanie Profilami</h2>
+        <button class="close-btn" onclick="closeModal('profileModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="profiles-list" id="profilesList">
+          <!-- Injected via JS -->
+        </div>
+        <form id="createProfileForm" class="add-profile-form"
+          style="margin-top: 1.5rem; border-top: 1px solid var(--panel-border); padding-top: 1.5rem;">
+          <h4>Dodaj nowy profil</h4>
+          <div class="form-group" style="margin-top: 10px;">
+            <input type="text" id="newProfileName" class="input-field" placeholder="Nazwa profilu..." required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Utwórz Profil</button>
+        </form>
+      </div>
     </div>
   </div>
 

@@ -54,7 +54,7 @@ body {
 }
 
 .sidebar-header {
-  padding: 2rem 1.5rem;
+  padding: 2rem 1.5rem 1rem 1.5rem;
 }
 
 .logo {
@@ -64,6 +64,54 @@ body {
   align-items: center;
   gap: 10px;
   color: #fff;
+  margin-bottom: 1.5rem;
+}
+
+.profile-selector-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.profile-select {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.profiles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+}
+
+.profile-item-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-item.active-profile {
+  border-color: var(--primary);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.btn-icon {
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sidebar-nav {
@@ -531,4 +579,82 @@ body {
 
 .btn-delete:hover {
   background: rgba(239, 68, 68, 0.1);
+}
+
+/* Budgets & Savings Headers */
+.budgets-header,
+.savings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Overview Page */
+.overview-tabs-wrapper {
+  border-radius: 14px;
+}
+
+.overview-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.overview-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.overview-tab:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.overview-tab.active {
+  font-weight: 600;
+  box-shadow: 0 0 14px rgba(99, 102, 241, 0.25);
+}
+
+/* Profile Badge */
+.profile-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+/* Chart container responsive fix */
+.chart-container {
+  overflow: hidden;
+}
+
+/* Input date styling for dark theme */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.6);
+  cursor: pointer;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  filter: invert(1) opacity(1);
 }
